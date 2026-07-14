@@ -1,4 +1,4 @@
-# Seg-Road 学习笔记：第 1 步（像素连通性结构 PCS）
+# Seg-Road 学习笔记：像素连通性结构 PCS
 
 本篇笔记整理了关于 **像素连通性结构 (Pixel Connectivity Structure, PCS)** 的核心知识点、数学公式以及 Python 代码中的基础函数应用。
 
@@ -46,7 +46,7 @@ Target_con[d, y, x] = Y[y, x] AND Y[y + dy_d, x + dx_d]
 
 ## 3. 代码实现核心（以 NumPy 为例）
 
-代码在 [pcs.py](file:///Users/bytedance/.gemini/antigravity-ide/scratch/seg_road_replication/code/pcs.py) 中通过**矩阵平移**与**按位与**操作来实现：
+代码在 `code/pcs.py` 中通过**矩阵平移**与**按位与**操作来实现：
 
 ```python
 # 8 个方向的偏移向量表示（二维向量）

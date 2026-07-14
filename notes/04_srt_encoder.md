@@ -1,6 +1,6 @@
-# Seg-Road 学习笔记：第 2 步（空间自适应缩减 Transformer）
+# Seg-Road 学习笔记：SRT 编码器
 
-本篇笔记整理了关于 **空间自适应缩减 Transformer (Spatial Reduction Transformer, SRT)** 编码器的核心知识点、数学公式以及 PyTorch 代码实现。
+本篇整理 **空间自适应缩减 Transformer (Spatial Reduction Transformer, SRT)** 编码器的核心知识点和 PyTorch 实现。目前已开始学习自注意力和空间缩减的基本思想，后续继续补充代码形状变化与 MixFFN。
 
 ---
 
@@ -11,6 +11,131 @@
 为了解决这个问题，Seg-Road 引入了 **SRT 编码器**，其包含两个核心改进：
 1.  **SRA (Spatial Reduction Attention)**：降低自注意力计算复杂度。
 2.  **MixFFN**：引入局部上下文，消除显式位置编码。
+
+### 1.1 为什么道路提取需要 Attention
+
+CNN 擅长观察局部区域，但遥感道路可能跨越整张图，并且会被树木、建筑和阴影遮挡。
+
+模型不仅要识别局部纹理，还要判断：
+
+```text
+图像一侧的道路，是否和远处被遮挡后的道路属于同一条道路
+```
+
+Self-Attention 允许每个位置与其他位置建立联系，因此更适合提取道路的全局结构和长距离依赖。
+
+### 1.2 特征图如何变成 token 序列
+
+卷积特征图通常写成：
+
+```text
+B x C x H x W
+```
+
+进入 Transformer 前，会把空间位置展开成序列：
+
+```text
+B x N x C
+N = H x W
+```
+
+其中：
+
+*   `B`：batch size；
+*   `C`：每个位置的特征通道数；
+*   `H x W`：空间尺寸；
+*   `N`：token 数量，每个 token 对应一个空间位置。
+
+例如：
+
+```text
+H = 128
+W = 128
+N = 16384
+```
+
+### 1.3 Q、K、V 的直觉
+
+Self-Attention 会把每个 token 转换成三种表示：
+
+```text
+Q = Query，当前位置想查询什么
+K = Key，每个位置可以用什么特征被匹配
+V = Value，匹配后真正取回的内容
+```
+
+整体流程：
+
+```text
+Q 与 K 计算相似度
+-> Softmax 得到注意力权重
+-> 使用权重加权 V
+-> 得到融合全局信息的新特征
+```
+
+### 1.4 普通 Attention 为什么是 `O(N^2)`
+
+普通 Self-Attention 中，每个 Query 都要和全部 Key 比较：
+
+```text
+N 个 Query x N 个 Key
+```
+
+因此注意力矩阵的大小是：
+
+```text
+N x N
+```
+
+如果特征图为 `128 x 128`：
+
+```text
+N = 16384
+Attention 矩阵约为 16384 x 16384
+```
+
+这会产生超过 2.6 亿个比较位置，计算量和显存占用都很高。
+
+### 1.5 SRA 的核心改进
+
+普通 Attention：
+
+```text
+Q token 数量: N
+K token 数量: N
+V token 数量: N
+```
+
+SRA 保持 Query 的完整分辨率，只缩减 Key 和 Value：
+
+```text
+Q token 数量: N
+K token 数量: N / r^2
+V token 数量: N / r^2
+```
+
+Query 不缩减，是因为最终仍要为原始的每个位置生成输出。Key 和 Value 可以理解为供 Query 查询的信息库，压缩信息库能够减少计算量。
+
+例如特征图为 `128 x 128`，且 `sr_ratio = 8`：
+
+```text
+原始 K/V: 128 x 128 = 16384 tokens
+缩减 K/V: 16 x 16 = 256 tokens
+```
+
+Attention 矩阵由：
+
+```text
+16384 x 16384
+```
+
+缩小为：
+
+```text
+16384 x 256
+```
+
+因此 SRA 在保留全局建模能力的同时，显著降低了计算量。
 
 ---
 

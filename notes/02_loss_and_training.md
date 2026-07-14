@@ -1,6 +1,6 @@
-# Seg-Road 专题补充：损失函数与训练术语
+# Seg-Road 学习笔记：损失函数与训练目标
 
-本篇是学习过程中的专题补充，不作为主线编号笔记。它整理 Seg-Road 训练时提前遇到的几个核心概念：`seg_out`、`seg_target`、`pcs_out`、`pcs_target`、`BCEWithLogitsLoss`，以及变量名中的 `_con` 含义。
+本篇整理 `code/loss.py` 的核心算法与相关训练术语，包括预测和标签的对应关系、`BCEWithLogitsLoss`、联合损失以及 `SegRoadLoss` 的执行流程。
 
 ---
 
@@ -42,6 +42,13 @@ Pixel Connectivity Structure
 ```text
 seg_out  对比  seg_target
 pcs_out  对比  pcs_target
+```
+
+`model.py` 返回变量时使用 `seg_out` 和 `pcs_out`；传入 `SegRoadLoss.forward(...)` 后，参数名写成 `seg_pred` 和 `pcs_pred`。它们表示的是同一批模型预测：
+
+```text
+seg_out  = seg_pred
+pcs_out  = pcs_pred
 ```
 
 ### 2.1 `seg_out` 和 `seg_target`
@@ -279,7 +286,99 @@ total_loss = loss_seg + self.alpha * loss_con
 
 ---
 
-## 8. 本节记住
+## 8. `SegRoadLoss` 类的结构
+
+损失函数被封装为一个 PyTorch 模块：
+
+```python
+class SegRoadLoss(nn.Module):
+```
+
+继承 `nn.Module` 后，损失对象可以像函数一样调用：
+
+```python
+loss_fn = SegRoadLoss(alpha=0.2)
+total_loss, loss_seg, loss_con = loss_fn(
+    seg_pred,
+    seg_target,
+    pcs_pred,
+    pcs_target,
+)
+```
+
+PyTorch 会自动进入类中的 `forward(...)` 方法完成计算。
+
+### 8.1 初始化参数
+
+```python
+def __init__(self, alpha=0.2, pos_weight_seg=None, pos_weight_con=None):
+    super().__init__()
+    self.alpha = alpha
+```
+
+其中：
+
+*   `self` 表示当前损失函数对象；
+*   `super().__init__()` 初始化父类 `nn.Module`；
+*   `alpha` 控制 PCS 连通性损失的权重；
+*   `pos_weight_seg` 调整道路正样本的重要性；
+*   `pos_weight_con` 调整连通正样本的重要性；
+*   `None` 表示默认不额外加权。
+
+道路和连通位置通常比背景少，`pos_weight` 可以让正样本预测错误受到更大惩罚。
+
+### 8.2 `forward` 计算流程
+
+```python
+def forward(self, seg_pred, seg_target, pcs_pred, pcs_target):
+    seg_target = seg_target.float()
+    pcs_target = pcs_target.float()
+
+    loss_seg = self.bce_seg(seg_pred, seg_target)
+    loss_con = self.bce_con(pcs_pred, pcs_target)
+
+    total_loss = loss_seg + self.alpha * loss_con
+    return total_loss, loss_seg, loss_con
+```
+
+算法流程：
+
+```text
+target 转为浮点张量
+-> 分别计算分割损失和连通性损失
+-> 按 alpha 合成总损失
+-> 返回总损失和两个分支损失
+```
+
+`total_loss` 用于反向传播；`loss_seg` 和 `loss_con` 用于分别观察两个任务的训练情况。
+
+---
+
+## 9. 自测代码的作用
+
+`loss.py` 底部使用随机张量验证形状和计算流程：
+
+```python
+seg_pred = torch.randn(2, 1, 512, 512)
+pcs_pred = torch.randn(2, 8, 512, 512)
+
+seg_target = torch.randint(0, 2, (2, 1, 512, 512)).float()
+pcs_target = torch.randint(0, 2, (2, 8, 512, 512)).float()
+```
+
+这些是假数据，只用于确认：
+
+```text
+输入形状正确
+两个 BCE 可以正常计算
+联合损失可以正常返回
+```
+
+正式训练时，预测来自模型，标签来自真实数据集和 PCS 标签生成函数。
+
+---
+
+## 10. 本节记住
 
 ```text
 seg_out 是模型预测的道路图，seg_target 是真实道路答案。
