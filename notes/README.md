@@ -10,7 +10,7 @@
 | 1 | `01_pcs.md` | PCS 标签生成、数组平移、PyTorch 实现、反向映射 | 已完成核心学习 |
 | 2 | `02_loss_and_training.md` | BCE、logits、联合损失、`SegRoadLoss` 执行流程 | 已完成基础学习 |
 | 3 | `03_model_architecture.md` | Encoder-Decoder、多尺度特征、双分支输出、模型配置 | 已完成整体结构 |
-| 4 | `04_srt_encoder.md` | SRA、MixFFN、多级 SRT Encoder | 已开始：Attention 与 SRA 直觉 |
+| 4 | `04_srt_encoder.md` | SRA、MixFFN、多级 SRT Encoder | 已完成基础结构，待深入代码 |
 
 ## 当前知识闭环
 
@@ -33,10 +33,10 @@
 下一阶段继续 `04_srt_encoder.md`，结合 `code/srt.py` 学习：
 
 ```text
-多头注意力中的 `dim`、`num_heads` 和 `head_dim`
-Q/K/V 在代码中的形状变化
-MixFFN 为什么加入深度卷积
-四级 SRT Encoder 如何生成多尺度特征
+Softmax 和 Attention 权重的具体计算
+MixFFN 的逐行代码细节
+SRTEncoderStage 的运行验证
+训练数据如何进入四级 SRT Encoder
 ```
 
 ## 记录规则

@@ -233,3 +233,256 @@ Seg-Road 共包含 4 个 Stage，分辨率依次减半，通道数依次增加�
 *   **Stage 2**：降采样到 `64 x 64 x 64`。`sr_ratio` 设为 4。
 *   **Stage 3**：降采样到 `32 x 32 x 160`。`sr_ratio` 设为 2。
 *   **Stage 4**：降采样到 `16 x 16 x 256`。`sr_ratio` 设为 1（退化为标准 Attention）。
+
+---
+
+## 5. 实际代码流程：两种缩减要分开
+
+SRT 中有两种容易混淆的“缩小”:
+
+### 5.1 Encoder 的真正下采样
+
+这是网络主干层面的尺寸变化：
+
+```text
+512 x 512
+  -> 128 x 128
+  -> 64 x 64
+  -> 32 x 32
+  -> 16 x 16
+```
+
+它会改变特征图分辨率，也会改变后续 Stage 的输入输出形状。
+
+### 5.2 SRA 内部的 K/V 缩减
+
+SRA 只压缩 Attention 内部的 Key 和 Value：
+
+```text
+Q: N 个 token，保持完整分辨率
+K: N / r^2 个 token
+V: N / r^2 个 token
+```
+
+但 SRA 最终仍然输出 `N` 个位置，因此不会改变当前 SRTBlock 的输出分辨率。
+
+一句话区分：
+
+```text
+Encoder 下采样改变特征图大小。
+SRA 缩减只改变 Attention 内部的 K/V 数量。
+```
+
+---
+
+## 6. 多头注意力的形状
+
+在 `SpatialReductionAttention` 中，`dim` 是每个 token 的特征维度，`num_heads` 是注意力头数。
+
+```python
+head_dim = dim // num_heads
+```
+
+要求：
+
+```text
+dim 能被 num_heads 整除
+dim = num_heads x head_dim
+```
+
+例如：
+
+```text
+dim = 160
+num_heads = 5
+head_dim = 32
+```
+
+输入序列：
+
+```text
+B x N x C
+```
+
+经过线性层和多头拆分：
+
+```text
+B x N x C
+-> B x heads x N x head_dim
+```
+
+不同 head 可以从不同特征子空间学习全局关系。
+
+代码中的缩放因子：
+
+```python
+self.scale = head_dim ** -0.5
+```
+
+等价于 `1 / sqrt(head_dim)`，用于避免 Query 和 Key 点积过大，导致 Softmax 过度集中。
+
+---
+
+## 7. SRA 的 K/V 形状变化
+
+假设输入特征图为：
+
+```text
+B x C x 128 x 128
+```
+
+展平后：
+
+```text
+B x 16384 x C
+```
+
+如果 `sr_ratio = 8`，SRA 内部将特征图变为：
+
+```text
+B x C x 128 x 128
+-> B x C x 16 x 16
+-> B x 256 x C
+```
+
+因此：
+
+```text
+Q: B x heads x 16384 x head_dim
+K: B x heads x 256    x head_dim
+V: B x heads x 256    x head_dim
+```
+
+Attention 矩阵形状是：
+
+```text
+B x heads x 16384 x 256
+```
+
+而不是普通 Attention 的：
+
+```text
+B x heads x 16384 x 16384
+```
+
+计算结果仍然是：
+
+```text
+B x heads x 16384 x head_dim
+-> B x 16384 x C
+```
+
+这样每个原始位置都能获得全局信息，同时避免构造过大的完整 Attention 矩阵。
+
+---
+
+## 8. SRTBlock 的完整结构
+
+一个 `SRTBlock` 由两条残差路径组成：
+
+```text
+x
+  -> LayerNorm
+  -> SRA：全局关系建模
+  -> 与原始 x 残差相加
+  -> LayerNorm
+  -> MixFFN：局部特征和非线性变换
+  -> 再次残差相加
+```
+
+代码：
+
+```python
+x = x + self.attn(self.norm1(x), H, W)
+x = x + self.mlp(self.norm2(x), H, W)
+```
+
+SRTBlock 的输入输出形状不变：
+
+```text
+B x N x C -> B x N x C
+```
+
+### 8.1 残差连接
+
+残差连接的思想是：
+
+```text
+新特征 = 原始特征 + 当前模块学到的变化
+```
+
+这样可以保留原始信息，也让深层网络更容易训练。
+
+### 8.2 SRA 和 MixFFN 的分工
+
+```text
+SRA    -> 建立远距离、全局关系
+MixFFN -> 处理局部空间信息和非线性特征
+```
+
+两者结合后，模型既能看远处道路的整体连通关系，也能看附近像素的边缘和纹理。
+
+---
+
+## 9. SRTEncoderStage 的完整结构
+
+`SRTEncoderStage` 可以理解为：
+
+```text
+Patch Embedding 下采样 + 多个 SRTBlock
+```
+
+流程：
+
+```text
+输入二维特征图
+  -> Conv2d Patch Embedding
+  -> 展平为 B x N x C
+  -> LayerNorm
+  -> 重复执行多个 SRTBlock
+  -> 还原为 B x C x H x W
+```
+
+卷积 Patch Embedding 同时完成：
+
+```text
+改变空间尺寸
+把输入通道投影到 embed_dim
+```
+
+使用卷积而不是硬切 Patch，还能让相邻窗口重叠，更适合道路这种连续结构。
+
+最终四个 Stage 的形状为：
+
+```text
+x : B x 3   x 512 x 512
+f1: B x 32  x 128 x 128
+f2: B x 64  x 64  x 64
+f3: B x 160 x 32  x 32
+f4: B x 256 x 16  x 16
+```
+
+---
+
+## 10. 当前学习状态
+
+已学习：
+
+```text
+Self-Attention 的目的
+Q/K/V 的基本含义
+普通 Attention 的 O(N^2) 问题
+SRA 如何缩减 K/V
+多头注意力的基本形状
+SRTBlock 的 SRA + MixFFN + 残差结构
+SRTEncoderStage 的下采样和 Block 堆叠
+```
+
+尚未深入：
+
+```text
+Softmax 和 Attention 权重的具体数值计算
+MixFFN 的逐行代码细节
+SRTEncoderStage 的完整 PyTorch 运行验证
+训练数据如何进入四级 Encoder
+```
