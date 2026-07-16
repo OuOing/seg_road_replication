@@ -387,3 +387,135 @@ BCEWithLogitsLoss 用来比较 logits 和 0/1 标签。
 _con 表示 connectivity，也就是连通性。
 PCS = Pixel Connectivity Structure。
 ```
+
+---
+
+## 11. 从一次训练迭代看完整闭环
+
+一次训练 iteration 可以理解为：模型先做题，再根据答案批改，最后修改参数。
+
+```text
+读取 image 和 road_mask
+-> 根据 road_mask 生成 pcs_target
+-> model(image) 得到 seg_out、pcs_out
+-> loss_fn 比较预测和两个 target
+-> total_loss.backward() 计算梯度
+-> optimizer.step() 更新模型参数
+-> optimizer.zero_grad() 清空旧梯度
+```
+
+对应的伪代码为：
+
+```python
+optimizer.zero_grad()
+seg_out, pcs_out = model(image)
+pcs_target = build_pcs_target(road_mask)
+total_loss, loss_seg, loss_con = loss_fn(
+    seg_out, road_mask, pcs_out, pcs_target
+)
+total_loss.backward()
+optimizer.step()
+```
+
+这里最关键的方向是：
+
+```text
+预测 -> 损失 -> 梯度 -> 参数更新
+```
+
+`backward()` 不是重新预测，而是沿着计算过程计算“每个参数应该往哪个方向调整”。`step()` 才真正使用这些梯度修改参数。
+
+### 11.1 为什么需要两个分支一起训练
+
+如果只训练 `seg_out`，模型主要学习“这个像素是不是道路”；加入 `pcs_out` 后，模型还要学习“这个道路像素是否和指定方向上的另一个像素相连”。
+
+```text
+seg_loss: 像素类别是否正确
+con_loss: 道路连接关系是否正确
+total_loss = seg_loss + alpha * con_loss
+```
+
+因此 PCS 不是后处理阶段临时补救，而是训练时直接参与参数更新的辅助任务。
+
+---
+
+## 12. 数据、预测与评价指标
+
+### 12.1 一个样本包含什么
+
+道路分割任务中的一个样本通常至少包含：
+
+```text
+image:      原始遥感图像，形状通常是 (3, H, W)
+road_mask:  道路真值，形状通常是 (1, H, W)
+pcs_target: 根据 road_mask 生成的 8 通道连通性真值
+```
+
+加入 batch 维度后：
+
+```text
+image:      (B, 3, H, W)
+road_mask:  (B, 1, H, W)
+pcs_target: (B, 8, H, W)
+```
+
+其中 `B` 是一次送入模型的图片数量。模型的两个输出必须和对应 target 具有相同形状：
+
+```text
+seg_out: (B, 1, H, W)
+pcs_out: (B, 8, H, W)
+```
+
+### 12.2 从 logits 变成二值预测
+
+训练损失直接使用 logits，但评价指标需要 0/1 预测，因此推理时要先经过 sigmoid：
+
+```text
+seg_probability = sigmoid(seg_out)
+seg_prediction  = seg_probability > 0.5
+```
+
+PCS 分支同理。这里的 `0.5` 是常用阈值，不是模型内部固定产生的数；实际项目也可以在验证集上调整阈值。
+
+### 12.3 四个基本计数
+
+把预测和真实标签逐像素比较，可以得到：
+
+```text
+TP: 预测为道路，真实也是道路
+FP: 预测为道路，真实是背景
+FN: 预测为背景，真实是道路
+TN: 预测为背景，真实也是背景
+```
+
+道路提取通常更关注 TP、FP、FN，因为背景很多，TN 过多可能让准确率看起来虚高。
+
+### 12.4 常用指标
+
+```text
+Precision = TP / (TP + FP)
+Recall    = TP / (TP + FN)
+IoU       = TP / (TP + FP + FN)
+F1        = 2 * Precision * Recall / (Precision + Recall)
+```
+
+直觉上：
+
+```text
+Precision 高：预测出来的道路大多是真的，误检少
+Recall 高：真实道路大多被找到，漏检少
+IoU 高：预测道路和真实道路的整体重叠更好
+F1 高：Precision 和 Recall 的综合表现好
+```
+
+道路断裂通常会增加 `FN`，道路周围出现大片误检通常会增加 `FP`。PCS 的目标之一，就是在不明显增加 FP 的情况下减少道路断裂造成的 FN。
+
+### 12.5 为什么论文同时报告 IoU 和 MIoU
+
+`IoU_road` 只关注道路类别；`MIoU` 通常先分别计算道路和背景的 IoU，再对类别取平均：
+
+```text
+MIoU = (IoU_background + IoU_road) / 2
+```
+
+因此两者不是重复指标：前者专门观察道路，后者观察道路和背景的整体分割质量。

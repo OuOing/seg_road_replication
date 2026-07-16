@@ -11,6 +11,28 @@
 | 2 | `02_loss_and_training.md` | BCE、logits、联合损失、`SegRoadLoss` 执行流程 | 已完成基础学习 |
 | 3 | `03_model_architecture.md` | Encoder-Decoder、多尺度特征、双分支输出、模型配置 | 已完成整体结构 |
 | 4 | `04_srt_encoder.md` | SRA、MixFFN、多级 SRT Encoder | 已完成基础结构，待深入代码 |
+| 5 | `05_training_pipeline.md` | Dataset、训练循环、指标与评估脚本 | 最小版本与 Smoke Test 已通过 |
+| 6 | `06_evaluation_and_experiments.md` | 指标总结、消融实验、公平比较与数据泄漏 | 已完成基础学习 |
+
+## 第二篇论文：SegRoadv2
+
+参考论文已放在：
+
+```text
+docs/SegRoadv2 - hybrid deformable self-attention and convolutional network for road extraction with connectivity structure.pdf
+```
+
+该 PDF 按项目约定被 `.gitignore` 忽略，不上传到远程仓库。学习顺序暂定为：
+
+```text
+先完成 Seg-Road v1 的数据、训练、指标和复现闭环
+-> 再阅读 SegRoadv2 的整体动机和方法改进
+-> 对比普通 SRA 与 deformable self-attention
+-> 对比两版网络的卷积、解码器和 connectivity structure
+-> 最后整理可迁移到 Agent 开发的论文阅读方法
+```
+
+第二篇论文当前状态：**已归档，排队学习，尚未开始精读**。
 
 ## 当前知识闭环
 
@@ -30,7 +52,7 @@
 
 ## 下一步
 
-下一阶段继续 `04_srt_encoder.md`，结合 `code/srt.py` 学习：
+下一阶段继续第一篇论文，结合 `code/srt.py` 学习：
 
 ```text
 Softmax 和 Attention 权重的具体计算
@@ -38,6 +60,8 @@ MixFFN 的逐行代码细节
 SRTEncoderStage 的运行验证
 训练数据如何进入四级 SRT Encoder
 ```
+
+训练工程已通过合成数据 Smoke Test。下一步需要整理真实数据集，并按原始大图或地理区域划分训练、验证和测试数据，避免相邻 patch 泄漏。
 
 ## 记录规则
 
