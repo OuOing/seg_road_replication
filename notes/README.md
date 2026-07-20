@@ -13,6 +13,7 @@
 | 4 | `04_srt_encoder.md` | SRA、MixFFN、多级 SRT Encoder | 已完成基础结构，待深入代码 |
 | 5 | `05_training_pipeline.md` | Dataset、训练循环、指标与评估脚本 | 最小版本与 Smoke Test 已通过 |
 | 6 | `06_evaluation_and_experiments.md` | 指标总结、消融实验、公平比较与数据泄漏 | 已完成基础学习 |
+| 7 | `07_review_summary.md` | 全流程复习速查：模型、损失、训练、推理与实验 | 已完成整理 |
 
 ## 第二篇论文：SegRoadv2
 
@@ -52,13 +53,13 @@ docs/SegRoadv2 - hybrid deformable self-attention and convolutional network for 
 
 ## 下一步
 
-下一阶段继续第一篇论文，结合 `code/srt.py` 学习：
+下一阶段继续第一篇论文，结合真实数据和实验学习：
 
 ```text
-Softmax 和 Attention 权重的具体计算
-MixFFN 的逐行代码细节
-SRTEncoderStage 的运行验证
-训练数据如何进入四级 SRT Encoder
+真实数据集整理与无泄漏划分
+正式训练和测试集评估
+PCS 消融实验
+参数量、FLOPs 和速度统计
 ```
 
 训练工程已通过合成数据 Smoke Test。下一步需要整理真实数据集，并按原始大图或地理区域划分训练、验证和测试数据，避免相邻 patch 泄漏。
