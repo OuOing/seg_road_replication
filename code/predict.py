@@ -8,6 +8,7 @@ import torch
 from PIL import Image
 
 from model import SegRoad
+from device import DEVICE_CHOICES, select_device
 
 
 def parse_args():
@@ -19,6 +20,7 @@ def parse_args():
     parser.add_argument("--image-height", type=int, default=512)
     parser.add_argument("--image-width", type=int, default=512)
     parser.add_argument("--threshold", type=float, default=0.5)
+    parser.add_argument("--device", choices=DEVICE_CHOICES, default="auto")
     return parser.parse_args()
 
 
@@ -33,7 +35,7 @@ def load_image(path, image_size):
 
 def main():
     args = parse_args()
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = select_device(args.device)
     checkpoint = torch.load(args.checkpoint, map_location=device)
 
     model = SegRoad(model_size=args.model_size).to(device)

@@ -37,6 +37,38 @@ def collect_image_mask_pairs(image_dir, mask_dir):
     return pairs
 
 
+def select_pairs_from_list(pairs, split_file):
+    """Select image/mask pairs using one sample stem per line."""
+    split_file = Path(split_file)
+    sample_names = []
+    seen = set()
+    for line_number, raw_line in enumerate(split_file.read_text().splitlines(), 1):
+        sample_name = raw_line.split("#", 1)[0].strip()
+        if not sample_name:
+            continue
+        sample_name = Path(sample_name).stem
+        if sample_name in seen:
+            raise ValueError(
+                f"Duplicate sample '{sample_name}' in {split_file}:{line_number}."
+            )
+        seen.add(sample_name)
+        sample_names.append(sample_name)
+
+    if not sample_names:
+        raise ValueError(f"Split file is empty: {split_file}")
+
+    pairs_by_stem = {image_path.stem: pair for pair in pairs for image_path in pair[:1]}
+    missing = [name for name in sample_names if name not in pairs_by_stem]
+    if missing:
+        preview = ", ".join(missing[:5])
+        suffix = " ..." if len(missing) > 5 else ""
+        raise ValueError(
+            f"{len(missing)} samples from {split_file} have no image/mask pair: "
+            f"{preview}{suffix}"
+        )
+    return [pairs_by_stem[name] for name in sample_names]
+
+
 class RoadDataset(Dataset):
     """Load an RGB image, binary road mask, and its 8-channel PCS target."""
 

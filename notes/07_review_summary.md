@@ -177,4 +177,108 @@ pcs_target： (8, 512, 512)，float32，值为 0/1
 如果原始文件名是 `abc_001_sat` 和 `abc_001_mask`，需要统一 stem 后再使用当前配对函数，或专门修改配对逻辑。
 
 正式实验不要只按 patch 随机划分；应先按原始大图、城市或区域划分 train/val/test，再分别裁剪 patch。
+
+### 当前 DeepGlobe 数据状态
+
+当前下载的公开镜像包含：
+
+```text
+train：6226 张图像和 6226 张 mask
+valid：1243 张图像，无 mask
+test：1101 张图像，无 mask
+```
+
+因此当前监督实验固定使用有标注的 train 数据划分：
+
+```text
+train.txt：4980
+val.txt：1246
+test.txt：空（无公开 mask，不能计算 IoU/F1）
+```
+
+无标注的 valid/test 图像可以用于最终预测或生成提交文件，但不能作为本地监督评估集。正式报告应明确说明这一点。
+
+## 11. AI 时代的代码学习重点
+
+不需要逐行背诵所有代码，但必须掌握关键代码的意图、输入输出、失败风险和验证方法。
+
+### 必须深入理解
+
+```text
+code/pcs.py：PCS 标签、方向偏移、边界处理
+code/srt.py：Q/K/V 形状、SRA 缩减、MixFFN 二维变换
+code/train.py：数据、损失、梯度、指标和 checkpoint 闭环
+```
+
+这些地方即使代码能运行，写错后也可能产生可信但错误的实验结果。
+
+### 需要理解流程
+
+```text
+Dataset、DataLoader、推理、checkpoint、命令行参数
+```
+
+目标是能追踪数据从哪里进入、参数在哪里更新、指标在哪里计算，以及模型在哪里保存。
+
+### 可以交给 AI 生成
+
+```text
+文件遍历、argparse 样板、日志格式、重复性测试脚手架
+```
+
+但必须检查生成代码的形状、边界条件、数据划分和测试结果。
+
+### 代码审查问题
+
+```text
+输入和输出形状是什么？
+这一层为什么存在？
+如果写错会出现什么现象？
+测试是否真的覆盖了关键行为？
+```
+
+学习目标不是默写 Seg-Road，而是能解释关键数据流、发现 AI 生成代码的问题，并设计实验验证它。
+
+## 12. 训练设备
+
+当前 Mac 是 Apple M4 Pro（48GB）。项目支持：
+
+```text
+--device auto：依次选择 CUDA、MPS、CPU
+--device mps：强制使用 Apple GPU
+--device cuda：强制使用 NVIDIA GPU
+--device cpu：强制使用 CPU
+```
+
+Apple 芯片本机训练应优先使用 MPS。若当前运行环境无法访问 MPS，可在本机 Terminal 验证，或使用带 NVIDIA GPU 的云环境完成正式复现。
+
+## 13. 真实训练与类别不平衡
+
+DeepGlobe 首轮正式训练使用：
+
+```text
+设备：Apple MPS
+模型：Seg-Road-s
+train：4980
+validation：1246
+```
+
+前两轮出现：loss 下降，但道路 IoU/F1 接近 0。这通常表示模型在训练初期偏向预测背景。抽样统计中，道路像素约占 4.25%，背景约占 95.75%。
+
+加权 BCE 使用 `pos_weight` 提高道路正样本的损失权重：
+
+```text
+Weighted BCE = -[pos_weight * y * log(p) + (1-y) * log(1-p)]
+```
+
+可用 `背景像素数 / 道路像素数` 估算权重，当前约为 22.5；实际实验可先尝试 5、10、15，避免权重过大导致大量误检。
+
+`pos_weight` 与 `alpha` 不同：
+
+```text
+pos_weight：平衡道路和背景像素
+alpha：平衡 segmentation loss 和 PCS loss
+```
+
+判断规则：先观察前 5 个 epoch。如果 IoU/F1 开始上升，继续普通 BCE；如果持续为 0，再停止并开展加权 BCE 对照实验。
 ```

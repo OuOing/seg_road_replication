@@ -8,7 +8,8 @@ import numpy as np
 import torch
 from torch.utils.data import DataLoader
 
-from dataset import RoadDataset, collect_image_mask_pairs
+from dataset import RoadDataset, collect_image_mask_pairs, select_pairs_from_list
+from device import DEVICE_CHOICES, select_device
 from loss import SegRoadLoss
 from metrics import confusion_counts, merge_counts, metrics_from_counts
 from model import SegRoad
@@ -77,20 +78,45 @@ def parse_args():
     parser.add_argument("--batch-size", type=int, default=2)
     parser.add_argument("--image-height", type=int, default=512)
     parser.add_argument("--image-width", type=int, default=512)
+    parser.add_argument(
+        "--train-list",
+        help="Text file containing one training sample stem per line.",
+    )
+    parser.add_argument(
+        "--val-list",
+        help="Text file containing one validation sample stem per line.",
+    )
     parser.add_argument("--val-ratio", type=float, default=0.2)
     parser.add_argument("--learning-rate", type=float, default=1e-4)
     parser.add_argument("--pcs-radius", type=int, default=2)
     parser.add_argument("--num-workers", type=int, default=0)
     parser.add_argument("--seed", type=int, default=42)
+    parser.add_argument("--device", choices=DEVICE_CHOICES, default="auto")
     return parser.parse_args()
 
 
 def main():
     args = parse_args()
     set_seed(args.seed)
-    device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+    device = select_device(args.device)
     pairs = collect_image_mask_pairs(args.image_dir, args.mask_dir)
-    train_pairs, val_pairs = split_pairs(pairs, args.val_ratio, args.seed)
+    if bool(args.train_list) != bool(args.val_list):
+        raise ValueError("--train-list and --val-list must be provided together.")
+    if args.train_list:
+        train_pairs = select_pairs_from_list(pairs, args.train_list)
+        val_pairs = select_pairs_from_list(pairs, args.val_list)
+        overlap = {pair[0].stem for pair in train_pairs} & {
+            pair[0].stem for pair in val_pairs
+        }
+        if overlap:
+            preview = ", ".join(sorted(overlap)[:5])
+            raise ValueError(f"Training and validation splits overlap: {preview}")
+    else:
+        print(
+            "Warning: using a random file-level validation split. "
+            "Use --train-list and --val-list for formal experiments."
+        )
+        train_pairs, val_pairs = split_pairs(pairs, args.val_ratio, args.seed)
     image_size = (args.image_height, args.image_width)
 
     train_dataset = RoadDataset(
@@ -104,14 +130,14 @@ def main():
         batch_size=args.batch_size,
         shuffle=True,
         num_workers=args.num_workers,
-        pin_memory=torch.cuda.is_available(),
+        pin_memory=device.type == "cuda",
     )
     val_loader = DataLoader(
         val_dataset,
         batch_size=args.batch_size,
         shuffle=False,
         num_workers=args.num_workers,
-        pin_memory=torch.cuda.is_available(),
+        pin_memory=device.type == "cuda",
     )
 
     model = SegRoad(model_size=args.model_size).to(device)

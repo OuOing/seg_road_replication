@@ -2,6 +2,8 @@
 __pycache__/
 *.py[cod]
 .venv/
+data/
+runs/
 
 # Local papers / reference material
 docs/*.pdf
