@@ -281,4 +281,69 @@ alpha：平衡 segmentation loss 和 PCS loss
 ```
 
 判断规则：先观察前 5 个 epoch。如果 IoU/F1 开始上升，继续普通 BCE；如果持续为 0，再停止并开展加权 BCE 对照实验。
+
+普通 BCE 实验最终完成 20 个 epoch：
+
+```text
+val loss：0.1956
+accuracy：0.9598
+IoU / F1 / Precision / Recall：0
+```
+
+这确认模型发生背景塌缩：约 96% 的背景使 Accuracy 看起来很高，但预测道路比例为 0。下一轮使用独立输出目录和加权 BCE：
+
+```text
+seg_pos_weight = 10
+pcs_pos_weight = 10
+```
+
+每轮同时记录 Precision、Recall 和 `predicted_positive_ratio`，观察是否从全背景恢复，以及是否因权重过大产生道路误检。
+
+### 训练诊断结果
+
+依次完成了以下诊断：
+
+```text
+普通 BCE，lr=1e-4：20 epoch 全背景
+加权 BCE(10)，lr=1e-4：5 epoch 全背景
+加权 BCE(10)，lr=1e-3：短暂预测道路后退回背景
+单图 100 步过拟合：IoU 约 0.38，证明模型和反向传播能学习
+```
+
+概率分析发现模型曾输出接近常数的 `0.316~0.343`，因此不是单纯把 threshold 从 0.5 调低就能解决。
+
+### Dice 与小 Batch 归一化
+
+加入可选 Dice Loss：
+
+```text
+seg_loss = weighted_BCE + dice_weight * DiceLoss
+total_loss = seg_loss + alpha * PCS_BCE
+```
+
+Decoder 原先使用 BatchNorm。当前 batch size 只有 2~4，训练与验证之间的统计量不稳定，验证结果会在全背景和全道路之间跳变。因此改为不依赖 batch 统计的 GroupNorm，并通过小数据对照实验验证稳定性。
+
+### 权重选择实验
+
+在固定 200 train / 50 validation 上，只改变正样本权重：
+
+```text
+pos_weight=22.5：best IoU 0.1061，pred+ 约 0.30，误报较多
+pos_weight=10：  best IoU 0.1219，pred+ 约 0.15，综合最好
+pos_weight=5：   best IoU 0.1042，容易退回背景
+```
+
+当前选定的全量实验配置：
+
+```text
+GroupNorm
+seg_pos_weight = 10
+pcs_pos_weight = 10
+dice_weight = 1
+learning_rate = 3e-4
+batch_size = 4
+num_workers = 2
+```
+
+训练脚本现已支持 `--resume`、batch 进度和每轮耗时。MPS 上 512 输入的全量单 epoch 约需 10 分钟，训练产物继续保存在被 Git 忽略的 `runs/` 下。
 ```

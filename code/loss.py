@@ -13,6 +13,17 @@ except ImportError:
         BCEWithLogitsLoss = Dummy
     HAS_TORCH = False
 
+def soft_dice_loss(logits, target, smooth=1.0):
+    """Compute batch-mean soft Dice loss from segmentation logits."""
+    probabilities = torch.sigmoid(logits)
+    target = target.float()
+    reduce_dims = tuple(range(1, probabilities.dim()))
+    intersection = (probabilities * target).sum(dim=reduce_dims)
+    denominator = probabilities.sum(dim=reduce_dims) + target.sum(dim=reduce_dims)
+    dice = (2.0 * intersection + smooth) / (denominator + smooth)
+    return 1.0 - dice.mean()
+
+
 class SegRoadLoss(nn.Module):
     """
     Joint Loss function for Seg-Road (Equation 6):
@@ -21,9 +32,16 @@ class SegRoadLoss(nn.Module):
     L_seg is BCE loss for road segmentation.
     L_con is BCE loss for pixel connectivity structure (PCS).
     """
-    def __init__(self, alpha=0.2, pos_weight_seg=None, pos_weight_con=None):
+    def __init__(
+        self,
+        alpha=0.2,
+        pos_weight_seg=None,
+        pos_weight_con=None,
+        dice_weight=0.0,
+    ):
         super().__init__()
         self.alpha = alpha
+        self.dice_weight = dice_weight
         
         # We use BCEWithLogitsLoss because the model outputs raw logits.
         # This is more numerically stable than Sigmoid + BCELoss.
@@ -52,6 +70,10 @@ class SegRoadLoss(nn.Module):
         pcs_target = pcs_target.float()
         
         loss_seg = self.bce_seg(seg_pred, seg_target)
+        if self.dice_weight:
+            loss_seg = loss_seg + self.dice_weight * soft_dice_loss(
+                seg_pred, seg_target
+            )
         loss_con = self.bce_con(pcs_pred, pcs_target)
         
         total_loss = loss_seg + self.alpha * loss_con

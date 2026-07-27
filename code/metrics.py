@@ -33,12 +33,19 @@ def binary_metrics(prediction, target, epsilon=1e-7):
     accuracy = (true_positive + true_negative) / (
         true_positive + false_positive + false_negative + true_negative + epsilon
     )
+    total = true_positive + false_positive + false_negative + true_negative
     return {
         "iou": float(iou),
         "f1": float(f1),
         "precision": float(precision),
         "recall": float(recall),
         "accuracy": float(accuracy),
+        "predicted_positive_ratio": float(
+            (true_positive + false_positive) / (total + epsilon)
+        ),
+        "target_positive_ratio": float(
+            (true_positive + false_negative) / (total + epsilon)
+        ),
     }
 
 
@@ -59,10 +66,17 @@ def metrics_from_counts(counts, epsilon=1e-7):
     accuracy = (true_positive + true_negative) / (
         true_positive + false_positive + false_negative + true_negative + epsilon
     )
+    total = true_positive + false_positive + false_negative + true_negative
     return {
         "iou": float(iou),
         "f1": float(f1),
         "precision": float(precision),
         "recall": float(recall),
         "accuracy": float(accuracy),
+        "predicted_positive_ratio": float(
+            (true_positive + false_positive) / (total + epsilon)
+        ),
+        "target_positive_ratio": float(
+            (true_positive + false_negative) / (total + epsilon)
+        ),
     }

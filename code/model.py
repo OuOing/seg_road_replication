@@ -16,6 +16,7 @@ except ImportError:
         Linear = Dummy
         Conv2d = Dummy
         BatchNorm2d = Dummy
+        GroupNorm = Dummy
         LayerNorm = Dummy
         Dropout = Dummy
         GELU = Dummy
@@ -46,7 +47,7 @@ class SegRoadDecoder(nn.Module):
         # Fusion conv: processes concatenated projected features (decoder_dim * 4 channels)
         self.fusion_conv = nn.Sequential(
             nn.Conv2d(decoder_dim * 4, decoder_dim, kernel_size=3, padding=1, bias=False),
-            nn.BatchNorm2d(decoder_dim),
+            nn.GroupNorm(32, decoder_dim),
             nn.ReLU(inplace=True)
         )
         

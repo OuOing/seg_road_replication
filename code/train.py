@@ -2,6 +2,7 @@
 
 import argparse
 import random
+import time
 from pathlib import Path
 
 import numpy as np
@@ -33,8 +34,18 @@ def split_pairs(pairs, val_ratio, seed):
     return pairs[val_count:], pairs[:val_count]
 
 
-def run_epoch(model, loader, loss_fn, optimizer, device, training):
+def run_epoch(
+    model,
+    loader,
+    loss_fn,
+    optimizer,
+    device,
+    training,
+    log_interval=0,
+    phase="",
+):
     model.train(training)
+    started_at = time.perf_counter()
     total_loss = 0.0
     batch_count = 0
     counts = []
@@ -62,9 +73,17 @@ def run_epoch(model, loader, loss_fn, optimizer, device, training):
         )
         total_loss += total.item()
         batch_count += 1
+        if log_interval and batch_count % log_interval == 0:
+            elapsed = time.perf_counter() - started_at
+            print(
+                f"  {phase} batch {batch_count}/{len(loader)} | "
+                f"loss {total_loss / batch_count:.4f} | {elapsed:.1f}s",
+                flush=True,
+            )
 
     metrics = metrics_from_counts(merge_counts(counts))
     metrics["loss"] = total_loss / max(batch_count, 1)
+    metrics["elapsed_seconds"] = time.perf_counter() - started_at
     return metrics
 
 
@@ -73,6 +92,7 @@ def parse_args():
     parser.add_argument("--image-dir", required=True)
     parser.add_argument("--mask-dir", required=True)
     parser.add_argument("--output-dir", default="runs/segroad")
+    parser.add_argument("--resume", help="Checkpoint path used to resume training.")
     parser.add_argument("--model-size", choices=("s", "m", "l"), default="s")
     parser.add_argument("--epochs", type=int, default=20)
     parser.add_argument("--batch-size", type=int, default=2)
@@ -88,8 +108,12 @@ def parse_args():
     )
     parser.add_argument("--val-ratio", type=float, default=0.2)
     parser.add_argument("--learning-rate", type=float, default=1e-4)
+    parser.add_argument("--seg-pos-weight", type=float, default=1.0)
+    parser.add_argument("--pcs-pos-weight", type=float, default=1.0)
+    parser.add_argument("--dice-weight", type=float, default=0.0)
     parser.add_argument("--pcs-radius", type=int, default=2)
     parser.add_argument("--num-workers", type=int, default=0)
+    parser.add_argument("--log-interval", type=int, default=200)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", choices=DEVICE_CHOICES, default="auto")
     return parser.parse_args()
@@ -131,6 +155,7 @@ def main():
         shuffle=True,
         num_workers=args.num_workers,
         pin_memory=device.type == "cuda",
+        persistent_workers=args.num_workers > 0,
     )
     val_loader = DataLoader(
         val_dataset,
@@ -138,30 +163,65 @@ def main():
         shuffle=False,
         num_workers=args.num_workers,
         pin_memory=device.type == "cuda",
+        persistent_workers=args.num_workers > 0,
     )
 
     model = SegRoad(model_size=args.model_size).to(device)
-    loss_fn = SegRoadLoss(alpha=0.2)
+    seg_pos_weight = torch.tensor([args.seg_pos_weight], device=device)
+    pcs_pos_weight = torch.tensor([args.pcs_pos_weight], device=device)
+    loss_fn = SegRoadLoss(
+        alpha=0.2,
+        pos_weight_seg=seg_pos_weight,
+        pos_weight_con=pcs_pos_weight,
+        dice_weight=args.dice_weight,
+    )
     optimizer = torch.optim.AdamW(model.parameters(), lr=args.learning_rate)
     output_dir = Path(args.output_dir)
     output_dir.mkdir(parents=True, exist_ok=True)
     best_iou = -1.0
+    start_epoch = 1
+
+    if args.resume:
+        checkpoint = torch.load(args.resume, map_location=device)
+        model.load_state_dict(checkpoint["model"])
+        optimizer.load_state_dict(checkpoint["optimizer"])
+        start_epoch = checkpoint["epoch"] + 1
+        best_iou = checkpoint.get("metrics", {}).get("iou", -1.0)
+        print(f"Resuming from epoch {checkpoint['epoch']}: {args.resume}")
 
     print(f"Using device: {device}")
     print(f"Training samples: {len(train_dataset)}; validation samples: {len(val_dataset)}")
-    for epoch in range(1, args.epochs + 1):
+    for epoch in range(start_epoch, args.epochs + 1):
         train_metrics = run_epoch(
-            model, train_loader, loss_fn, optimizer, device, training=True
+            model,
+            train_loader,
+            loss_fn,
+            optimizer,
+            device,
+            training=True,
+            log_interval=args.log_interval,
+            phase="train",
         )
         with torch.no_grad():
             val_metrics = run_epoch(
-                model, val_loader, loss_fn, optimizer, device, training=False
+                model,
+                val_loader,
+                loss_fn,
+                optimizer,
+                device,
+                training=False,
+                log_interval=args.log_interval,
+                phase="val",
             )
         print(
             f"Epoch {epoch:03d} | "
             f"train loss {train_metrics['loss']:.4f}, IoU {train_metrics['iou']:.4f} | "
             f"val loss {val_metrics['loss']:.4f}, IoU {val_metrics['iou']:.4f}, "
-            f"F1 {val_metrics['f1']:.4f}"
+            f"F1 {val_metrics['f1']:.4f}, "
+            f"P {val_metrics['precision']:.4f}, R {val_metrics['recall']:.4f}, "
+            f"pred+ {val_metrics['predicted_positive_ratio']:.4f} | "
+            f"time {train_metrics['elapsed_seconds']:.0f}s/"
+            f"{val_metrics['elapsed_seconds']:.0f}s"
         )
 
         checkpoint = {
