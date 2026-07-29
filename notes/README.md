@@ -14,26 +14,29 @@
 | 5 | `05_training_pipeline.md` | Dataset、训练循环、指标与评估脚本 | 最小版本与 Smoke Test 已通过 |
 | 6 | `06_evaluation_and_experiments.md` | 指标总结、消融实验、公平比较与数据泄漏 | 已完成基础学习 |
 | 7 | `07_review_summary.md` | 全流程复习速查：模型、损失、训练、推理与实验 | 已完成整理 |
+| 8 | `08_future_paper_path.md` | SegRoadV2、DiffRoad、FDMamba 的进阶学习与实验路线 | 已建立路线 |
+| 9 | `09_training_journey.md` | 从背景塌缩、诊断修正到全量 8 轮结束的完整实验复盘 | 已完成记录 |
 
-## 第二篇论文：SegRoadv2
+## 后续论文路线
 
-参考论文已放在：
+参考论文均已放在 `docs/`，并按项目约定被 `.gitignore` 忽略，不上传到远程仓库：
 
 ```text
 docs/SegRoadv2 - hybrid deformable self-attention and convolutional network for road extraction with connectivity structure.pdf
+docs/DiffRoad - A Conditional Diffusion-Based Network for Accurate Road Extraction.pdf
+docs/FDMamba - frequency-enhanced deformable Mamba for topology-aware road extraction.pdf
 ```
 
-该 PDF 按项目约定被 `.gitignore` 忽略，不上传到远程仓库。学习顺序暂定为：
+学习顺序暂定为：
 
 ```text
-先完成 Seg-Road v1 的数据、训练、指标和复现闭环
--> 再阅读 SegRoadv2 的整体动机和方法改进
--> 对比普通 SRA 与 deformable self-attention
--> 对比两版网络的卷积、解码器和 connectivity structure
--> 最后整理可迁移到 Agent 开发的论文阅读方法
+完成 Seg-Road v1 的数据、训练、指标和复现闭环
+-> SegRoadV2：可变形注意力、GroupDCN、条带卷积
+-> DiffRoad：条件扩散、DSA-FPN、PAGDecoder、拓扑指标
+-> FDMamba：频域学习、可变形扫描、SSM/Mamba、图级拓扑
 ```
 
-第二篇论文当前状态：**已归档，排队学习，尚未开始精读**。
+详细路线见 `08_future_paper_path.md`。三篇论文当前状态：**已归档并完成摘要级定位，待当前正式基线闭环后依次精读**。
 
 ## 当前知识闭环
 
@@ -53,16 +56,22 @@ docs/SegRoadv2 - hybrid deformable self-attention and convolutional network for 
 
 ## 下一步
 
-下一阶段继续第一篇论文，结合真实数据和实验学习：
+下一阶段继续完成第一篇论文的正式实验闭环：
 
 ```text
-真实数据集整理与无泄漏划分
-正式训练和测试集评估
+全量 threshold sweep 并保存 CSV
+低学习率短程续训
 PCS 消融实验
-参数量、FLOPs 和速度统计
+统一生成 summary.md 结果表
+补充推理速度统计
+开始 SegRoadV2 精读
 ```
 
-训练工程已通过合成数据 Smoke Test。下一步需要整理真实数据集，并按原始大图或地理区域划分训练、验证和测试数据，避免相邻 patch 泄漏。
+DeepGlobe 已完成固定的 4980/1246 train/validation 划分。全量 8 轮试跑的最佳 validation IoU 为 0.3776，最佳检查点保存在 `runs/deepglobe/segroad-s-full-probe/best.pt`；6 个固定验证样本的预测对照图已经生成。
+
+训练全过程的现象、假设、排查实验、修正依据和逐轮趋势统一记录在 `09_training_journey.md`。
+
+正式实验命令配方统一记录在 `../experiments/README.md`，包括 threshold sweep、低学习率短程续训和 PCS 消融。
 
 ## 记录规则
 

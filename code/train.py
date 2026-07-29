@@ -34,6 +34,12 @@ def split_pairs(pairs, val_ratio, seed):
     return pairs[val_count:], pairs[:val_count]
 
 
+def set_optimizer_learning_rate(optimizer, learning_rate):
+    """Set all optimizer parameter groups to the same learning rate."""
+    for group in optimizer.param_groups:
+        group["lr"] = learning_rate
+
+
 def run_epoch(
     model,
     loader,
@@ -41,6 +47,7 @@ def run_epoch(
     optimizer,
     device,
     training,
+    threshold=0.5,
     log_interval=0,
     phase="",
 ):
@@ -64,7 +71,7 @@ def run_epoch(
                 optimizer.step()
 
         probabilities = torch.sigmoid(seg_out)
-        predictions = probabilities >= 0.5
+        predictions = probabilities >= threshold
         counts.append(
             confusion_counts(
                 predictions.detach().cpu().numpy(),
@@ -87,7 +94,7 @@ def run_epoch(
     return metrics
 
 
-def parse_args():
+def parse_args(argv=None):
     parser = argparse.ArgumentParser(description=__doc__)
     parser.add_argument("--image-dir", required=True)
     parser.add_argument("--mask-dir", required=True)
@@ -107,16 +114,40 @@ def parse_args():
         help="Text file containing one validation sample stem per line.",
     )
     parser.add_argument("--val-ratio", type=float, default=0.2)
+    parser.add_argument(
+        "--eval-threshold",
+        type=float,
+        default=0.5,
+        help="Probability threshold used for train/validation metrics.",
+    )
     parser.add_argument("--learning-rate", type=float, default=1e-4)
+    parser.add_argument(
+        "--resume-learning-rate",
+        type=float,
+        help=(
+            "Override the learning rate stored in a resumed optimizer checkpoint."
+        ),
+    )
+    parser.add_argument(
+        "--reset-best-on-resume",
+        action="store_true",
+        help="Start best checkpoint tracking fresh after resuming.",
+    )
     parser.add_argument("--seg-pos-weight", type=float, default=1.0)
     parser.add_argument("--pcs-pos-weight", type=float, default=1.0)
+    parser.add_argument(
+        "--pcs-alpha",
+        type=float,
+        default=0.2,
+        help="Weight applied to the PCS connectivity loss; use 0 for ablation.",
+    )
     parser.add_argument("--dice-weight", type=float, default=0.0)
     parser.add_argument("--pcs-radius", type=int, default=2)
     parser.add_argument("--num-workers", type=int, default=0)
     parser.add_argument("--log-interval", type=int, default=200)
     parser.add_argument("--seed", type=int, default=42)
     parser.add_argument("--device", choices=DEVICE_CHOICES, default="auto")
-    return parser.parse_args()
+    return parser.parse_args(argv)
 
 
 def main():
@@ -170,7 +201,7 @@ def main():
     seg_pos_weight = torch.tensor([args.seg_pos_weight], device=device)
     pcs_pos_weight = torch.tensor([args.pcs_pos_weight], device=device)
     loss_fn = SegRoadLoss(
-        alpha=0.2,
+        alpha=args.pcs_alpha,
         pos_weight_seg=seg_pos_weight,
         pos_weight_con=pcs_pos_weight,
         dice_weight=args.dice_weight,
@@ -185,9 +216,16 @@ def main():
         checkpoint = torch.load(args.resume, map_location=device)
         model.load_state_dict(checkpoint["model"])
         optimizer.load_state_dict(checkpoint["optimizer"])
+        if args.resume_learning_rate is not None:
+            set_optimizer_learning_rate(optimizer, args.resume_learning_rate)
         start_epoch = checkpoint["epoch"] + 1
-        best_iou = checkpoint.get("metrics", {}).get("iou", -1.0)
+        if not args.reset_best_on_resume:
+            best_iou = checkpoint.get("metrics", {}).get("iou", -1.0)
         print(f"Resuming from epoch {checkpoint['epoch']}: {args.resume}")
+        if args.resume_learning_rate is not None:
+            print(f"Overriding resumed learning rate: {args.resume_learning_rate}")
+        if args.reset_best_on_resume:
+            print("Resetting best checkpoint tracking for this resumed run.")
 
     print(f"Using device: {device}")
     print(f"Training samples: {len(train_dataset)}; validation samples: {len(val_dataset)}")
@@ -199,6 +237,7 @@ def main():
             optimizer,
             device,
             training=True,
+            threshold=args.eval_threshold,
             log_interval=args.log_interval,
             phase="train",
         )
@@ -210,6 +249,7 @@ def main():
                 optimizer,
                 device,
                 training=False,
+                threshold=args.eval_threshold,
                 log_interval=args.log_interval,
                 phase="val",
             )
@@ -219,7 +259,8 @@ def main():
             f"val loss {val_metrics['loss']:.4f}, IoU {val_metrics['iou']:.4f}, "
             f"F1 {val_metrics['f1']:.4f}, "
             f"P {val_metrics['precision']:.4f}, R {val_metrics['recall']:.4f}, "
-            f"pred+ {val_metrics['predicted_positive_ratio']:.4f} | "
+            f"pred+ {val_metrics['predicted_positive_ratio']:.4f}, "
+            f"thr {args.eval_threshold:.2f} | "
             f"time {train_metrics['elapsed_seconds']:.0f}s/"
             f"{val_metrics['elapsed_seconds']:.0f}s"
         )

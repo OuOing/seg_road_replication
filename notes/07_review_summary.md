@@ -254,6 +254,8 @@ Apple 芯片本机训练应优先使用 MPS。若当前运行环境无法访问 
 
 ## 13. 真实训练与类别不平衡
 
+本节保留训练结论速查；从第一次普通 BCE 背景塌缩到 epoch 8 训练结束的完整时间线、诊断证据和实验决策，见 `09_training_journey.md`。
+
 DeepGlobe 首轮正式训练使用：
 
 ```text
@@ -345,5 +347,50 @@ batch_size = 4
 num_workers = 2
 ```
 
-训练脚本现已支持 `--resume`、batch 进度和每轮耗时。MPS 上 512 输入的全量单 epoch 约需 10 分钟，训练产物继续保存在被 Git 忽略的 `runs/` 下。
+训练脚本现已支持 `--resume`、batch 进度和每轮耗时。训练产物继续保存在被 Git 忽略的 `runs/` 下。
+
+### 全量八轮试跑
+
+使用 4980 train / 1246 validation、512 输入和上述候选配置完成 8 个 epoch：
+
+```text
+epoch 1：val IoU 0.1181，F1 0.2113，P 0.1248，R 0.6861，pred+ 0.2211
+epoch 2：val IoU 0.2260，F1 0.3687，P 0.3158，R 0.4428，pred+ 0.0564
+epoch 3：val IoU 0.2546，F1 0.4059，P 0.2697，R 0.8200，pred+ 0.1224
+epoch 4：val IoU 0.3387，F1 0.5060，P 0.3778，R 0.7658，pred+ 0.0816
+epoch 5：val IoU 0.2662，F1 0.4205，P 0.2781，R 0.8616，pred+ 0.1247
+epoch 6：val IoU 0.3231，F1 0.4884，P 0.3441，R 0.8408，pred+ 0.0983
+epoch 7：val IoU 0.3738，F1 0.5442，P 0.4084，R 0.8151，pred+ 0.0803
+epoch 8：val IoU 0.3776，F1 0.5482，P 0.4128，R 0.8155，pred+ 0.0795
+真实道路像素比例 target+：0.0402
 ```
+
+结论：模型已经明确摆脱全背景塌缩。IoU 总体上升，但 epoch 5 出现明显回落，表明固定学习率和较强正样本权重下仍有震荡。epoch 7~8 的指标接近，当前开始进入平台期。预测道路比例仍约为真实比例的两倍，因此主要问题是误检，而不是道路完全漏掉。
+
+当前最佳检查点为：
+
+```text
+runs/deepglobe/segroad-s-full-probe/best.pt
+epoch = 8
+val IoU = 0.3776
+```
+
+### 预测可视化结论
+
+使用 epoch 8 最佳检查点抽取 6 个固定验证样本，生成原图、真实 mask、预测 mask 和错误叠加图：
+
+```text
+绿色：TP，正确道路
+红色：FP，误检道路
+蓝色：FN，漏检道路
+```
+
+模型已经能识别主干道路和部分交叉口，但预测道路通常偏粗。误检主要来自施工带、田埂、河岸等细长纹理；漏检主要是狭窄支路和被遮挡路段。这与高 Recall、较低 Precision 的指标一致。
+
+可视化保存在：
+
+```text
+runs/deepglobe/segroad-s-full-probe/visualizations/comparison_sheet.png
+```
+
+下一阶段不应直接按 `3e-4` 再跑很多轮。更合理的是保留 epoch 8 最佳权重，加入学习率衰减后继续短跑，并对 `pos_weight=5~10` 或推理阈值进行验证集对照。

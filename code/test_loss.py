@@ -31,6 +31,18 @@ class SoftDiceLossTest(unittest.TestCase):
 
         self.assertGreater(combined_total, plain_total)
 
+    def test_alpha_zero_disables_connectivity_loss_in_total(self):
+        seg_pred = torch.zeros(1, 1, 2, 2)
+        seg_target = torch.zeros(1, 1, 2, 2)
+        pcs_pred = torch.ones(1, 8, 2, 2) * 10.0
+        pcs_target = torch.zeros(1, 8, 2, 2)
+        loss_fn = SegRoadLoss(alpha=0.0)
+
+        total, seg, con = loss_fn(seg_pred, seg_target, pcs_pred, pcs_target)
+
+        self.assertAlmostEqual(total.item(), seg.item())
+        self.assertGreater(con.item(), 0.0)
+
 
 if __name__ == "__main__":
     unittest.main()
