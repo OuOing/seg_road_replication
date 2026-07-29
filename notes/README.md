@@ -16,6 +16,7 @@
 | 7 | `07_review_summary.md` | 全流程复习速查：模型、损失、训练、推理与实验 | 已完成整理 |
 | 8 | `08_future_paper_path.md` | SegRoadV2、DiffRoad、FDMamba 的进阶学习与实验路线 | 已建立路线 |
 | 9 | `09_training_journey.md` | 从背景塌缩、诊断修正到全量 8 轮结束的完整实验复盘 | 已完成记录 |
+| 10 | `10_segroad_v1_closure.md` | 第一篇阶段性收口、待完成实验和过渡到 SegRoadV2 的判定标准 | 已建立收口页 |
 
 ## 后续论文路线
 
@@ -70,6 +71,8 @@ PCS 消融实验
 DeepGlobe 已完成固定的 4980/1246 train/validation 划分。全量 8 轮试跑的最佳 validation IoU 为 0.3776，最佳检查点保存在 `runs/deepglobe/segroad-s-full-probe/best.pt`；6 个固定验证样本的预测对照图已经生成。
 
 训练全过程的现象、假设、排查实验、修正依据和逐轮趋势统一记录在 `09_training_journey.md`。
+
+第一篇是否可以过渡到第二篇的判断标准记录在 `10_segroad_v1_closure.md`。
 
 正式实验命令配方统一记录在 `../experiments/README.md`，包括 threshold sweep、低学习率短程续训和 PCS 消融。
 

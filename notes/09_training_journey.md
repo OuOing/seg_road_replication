@@ -450,7 +450,43 @@ python3 code/summarize_experiment.py \
 
 这一步不是新增算法，而是固定实验口径。后续每次跑实验，都应该优先从该文件复制命令，再只修改明确要测试的变量。
 
-## 13. 这次训练最重要的方法论
+## 13. 过渡到 SegRoadV2 的判定标准
+
+第一篇不需要做到“完全复现论文数值”才进入第二篇，但需要形成一个可靠 baseline。建议满足下面条件后开始 SegRoadV2：
+
+```text
+必须完成：
+1. 完整 validation threshold sweep，并生成 threshold_sweep_val.csv
+2. PCS 消融，至少跑出 `--pcs-alpha 0` 的对照结果
+3. 用 summarize_experiment.py 生成统一 summary.md
+
+建议完成：
+4. 低学习率短程续训，判断 epoch 8 后是否还能提升
+5. 至少一张 prediction/error overlay 对比 PCS 开关或续训前后
+6. 参数量和推理速度记录
+```
+
+完成前 3 项后，即使当前 IoU 与论文报告仍有差距，也可以合理过渡。原因是我们已经知道当前实现的主要瓶颈：
+
+```text
+道路预测偏粗，FP 偏多
+细小支路和遮挡道路仍容易断裂或漏检
+固定 SRA 与普通局部卷积对弯曲、细长道路的适应性有限
+PCS 能否稳定改善连通性仍需消融验证
+```
+
+这些问题正好引出 SegRoadV2：
+
+```text
+Deformable Self-Attention：让注意力采样位置适应弯曲道路
+Groupable Deformable Convolution：让局部卷积不再只能看固定网格
+条带卷积：更适合细长道路结构
+继续保留 PCS：说明连通性监督仍是主线问题
+```
+
+因此，第一篇的收尾目标不是追到论文最高分，而是建立清楚的失败边界和对照基线。第二篇的学习就从“这些新模块分别想修第一篇哪个痛点”开始。
+
+## 14. 这次训练最重要的方法论
 
 ```text
 先建立 baseline，再修改；否则无法知道改动是否有效

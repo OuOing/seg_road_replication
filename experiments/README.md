@@ -105,3 +105,26 @@ Compare IoU/F1 with segroad-s-full-probe.
 Inspect visualizations for more blue FN gaps or broken roads.
 If pixel metrics are close but roads break more often, PCS helps topology.
 ```
+
+## Transition Gate To SegRoadV2
+
+Start SegRoadV2 once these artifacts exist:
+
+```text
+runs/deepglobe/segroad-s-full-probe/threshold_sweep_val.csv
+runs/deepglobe/segroad-s-full-probe/summary.md
+runs/deepglobe/segroad-s-no-pcs/best.pt
+```
+
+Nice-to-have before switching papers:
+
+```text
+runs/deepglobe/segroad-s-lr1e-4-finetune/best.pt
+MPS latency from code/model_stats.py
+visual comparison sheets for baseline vs ablation
+```
+
+The transition is justified when the Seg-Road v1 baseline has a clear result
+table and at least one PCS ablation. SegRoadV2 should then be studied as a set
+of targeted answers to the v1 errors: thick false positives, missed narrow
+roads, and limited adaptation to curved road geometry.

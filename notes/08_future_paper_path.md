@@ -20,6 +20,22 @@ DeepGlobe 论文 IoU           -> 69.88%
 
 建议实验：保持数据划分、损失和评估不变，只替换一个模块，分别验证 DSA、GroupDCN 和 strip convolution 的增益。
 
+进入本篇前的 Seg-Road v1 最小收口条件：
+
+```text
+完成 threshold sweep，明确默认阈值与最佳阈值的差异
+完成 PCS alpha=0 消融，知道连通性监督在当前实现中的贡献
+保留统一 summary.md，作为 SegRoadV2 的 baseline 对照
+```
+
+阅读 SegRoadV2 时不要先追全部公式。优先问三个问题：
+
+```text
+DSA 比 SRA 多出来的 offset 解决了什么？
+GroupDCN 比普通卷积多出来的可变形采样解决了什么？
+条带卷积为什么适合道路这种细长目标？
+```
+
 ## 2. DiffRoad：把分割改写成条件去噪
 
 论文：DiffRoad: A Conditional Diffusion-Based Network for Accurate Road Extraction（2026）
