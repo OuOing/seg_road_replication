@@ -44,12 +44,13 @@ def load_threshold_csv(path):
 def checkpoint_row(checkpoint_path, model_size):
     checkpoint = torch.load(checkpoint_path, map_location="cpu")
     metrics = checkpoint["metrics"]
+    args = checkpoint.get("args", {})
     model = SegRoad(model_size=model_size)
     counts = count_parameters(model)
     return {
         "name": Path(checkpoint_path).parent.name,
         "epoch": checkpoint["epoch"],
-        "threshold": 0.5,
+        "threshold": args.get("eval_threshold", 0.5),
         "parameters": counts["total"],
         "parameters_m": format_millions(counts["total"]),
         **{field: metrics[field] for field in METRIC_FIELDS},

@@ -208,15 +208,22 @@ loss -> backward -> 更新模型
 
 ---
 
-## 3. 后续学习内容
+## 3. 相关复习入口
 
-当前还没有正式进入：
+本页只解释整体模型结构。更细的内容看：
 
 ```text
-notes/04_srt_encoder.md 中的 SRT / Transformer 编码器细节
-srt.py 中的 Spatial Reduction Attention
-srt.py 中的 MixFFN
-完整训练脚本、Dataset、评估指标
+04_srt_encoder.md：SRA、MixFFN、SRTBlock
+05_training_pipeline.md：Dataset、训练循环、checkpoint
+06_evaluation_and_experiments.md：指标、消融和公平比较
+07_review_summary.md：第一篇总复习
 ```
 
-下一步可以继续沿着 `model.py` 进入 `srt.py`，学习论文真正的 Transformer 编码器主体。
+复习时先抓主线：
+
+```text
+Encoder 提取多尺度特征
+Decoder 融合多尺度特征
+seg_head 做道路分类
+pcs_head 做连通性监督
+```

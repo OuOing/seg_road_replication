@@ -1,22 +1,67 @@
-# Seg-Road 学习笔记索引
+# 道路提取论文学习笔记索引
 
-本目录按论文模块组织学习笔记，不再按对话日期拆分。新知识优先合并到对应主题；只有无法归入现有主题时才新增文件。
+本目录按论文分开放置笔记。根目录只保留总索引和跨论文路线，单篇论文的细节放入各自子目录。
 
-## 学习顺序与状态
+## 目录结构
+
+```text
+notes/
+  segroad_v1/   # 第一篇：Seg-Road
+  segroad_v2/   # 第二篇：SegRoadV2
+```
+
+## 第一篇：Seg-Road v1
+
+目录：`segroad_v1/`
 
 | 顺序 | 笔记 | 内容 | 状态 |
 | :--- | :--- | :--- | :--- |
-| 0 | `00_paper_overview.md` | 论文问题、整体架构、数据集与复现路线 | 已建立总览 |
-| 1 | `01_pcs.md` | PCS 标签生成、数组平移、PyTorch 实现、反向映射 | 已完成核心学习 |
-| 2 | `02_loss_and_training.md` | BCE、logits、联合损失、`SegRoadLoss` 执行流程 | 已完成基础学习 |
-| 3 | `03_model_architecture.md` | Encoder-Decoder、多尺度特征、双分支输出、模型配置 | 已完成整体结构 |
-| 4 | `04_srt_encoder.md` | SRA、MixFFN、多级 SRT Encoder | 已完成基础结构，待深入代码 |
-| 5 | `05_training_pipeline.md` | Dataset、训练循环、指标与评估脚本 | 最小版本与 Smoke Test 已通过 |
-| 6 | `06_evaluation_and_experiments.md` | 指标总结、消融实验、公平比较与数据泄漏 | 已完成基础学习 |
-| 7 | `07_review_summary.md` | 全流程复习速查：模型、损失、训练、推理与实验 | 已完成整理 |
-| 8 | `08_future_paper_path.md` | SegRoadV2、DiffRoad、FDMamba 的进阶学习与实验路线 | 已建立路线 |
-| 9 | `09_training_journey.md` | 从背景塌缩、诊断修正到全量 8 轮结束的完整实验复盘 | 已完成记录 |
-| 10 | `10_segroad_v1_closure.md` | 第一篇阶段性收口、待完成实验和过渡到 SegRoadV2 的判定标准 | 已建立收口页 |
+| 0 | `segroad_v1/README.md` | 第一篇复习顺序和阶段性结论 | 已建立 |
+| 1 | `segroad_v1/00_paper_overview.md` | 论文问题、整体架构、数据集与复现路线 | 已完成 |
+| 2 | `segroad_v1/01_pcs.md` | PCS 标签生成、数组平移、PyTorch 实现、反向映射 | 已完成 |
+| 3 | `segroad_v1/02_loss_and_training.md` | BCE、logits、联合损失、训练流程 | 已完成 |
+| 4 | `segroad_v1/03_model_architecture.md` | Encoder-Decoder、多尺度特征、双分支输出 | 已完成 |
+| 5 | `segroad_v1/04_srt_encoder.md` | SRA、MixFFN、多级 SRT Encoder | 已完成 |
+| 6 | `segroad_v1/05_training_pipeline.md` | Dataset、训练循环、指标与评估脚本 | 已完成 |
+| 7 | `segroad_v1/06_evaluation_and_experiments.md` | 指标、消融、公平比较、数据泄漏 | 已完成 |
+| 8 | `segroad_v1/07_review_summary.md` | 第一篇复习速查 | 已整理为复习版 |
+| 9 | `segroad_v1/09_training_journey.md` | 从背景塌缩到正式训练收口的完整实验复盘 | 已完成 |
+| 10 | `segroad_v1/10_segroad_v1_closure.md` | 第一篇阶段性收口与过渡标准 | 已完成 |
+
+第一篇当前最好本地结果：
+
+```text
+模型：Seg-Road-s
+数据：DeepGlobe labeled train split，本地 4980/1246 划分
+最好 checkpoint：runs/deepglobe/segroad-s-lr1e-4-finetune/best.pt
+threshold：0.85
+IoU：0.4779
+F1：0.6468
+Precision：0.6839
+Recall：0.6135
+```
+
+注意：该结果是本地简化复现 baseline，尚未达到论文报告的 DeepGlobe IoU 约 67.20%。
+
+## 第二篇：SegRoadV2
+
+目录：`segroad_v2/`
+
+| 顺序 | 笔记 | 内容 | 状态 |
+| :--- | :--- | :--- | :--- |
+| 0 | `segroad_v2/README.md` | 第二篇笔记索引 | 已建立 |
+| 1 | `segroad_v2/00_paper_overview.md` | 论文动机、整体结构、与 v1 的关系 | 已建立 |
+| 2 | `segroad_v2/01_module_map.md` | DSA、GroupDCN、条带卷积、PCS 的模块地图 | 已建立 |
+| 3 | `segroad_v2/02_dsa.md` | DSA 从 SRA 升级而来的直觉和公式 | 初版 |
+
+第二篇学习主线：
+
+```text
+SRA 固定采样        -> DSA 可变形注意力
+普通卷积固定网格    -> GroupDCN 可变形局部采样
+普通 decoder 卷积   -> 可重参数化条带卷积
+PCS                -> 继续保留，强化连通性
+```
 
 ## 后续论文路线
 
@@ -28,58 +73,22 @@ docs/DiffRoad - A Conditional Diffusion-Based Network for Accurate Road Extracti
 docs/FDMamba - frequency-enhanced deformable Mamba for topology-aware road extraction.pdf
 ```
 
-学习顺序暂定为：
+学习顺序：
 
 ```text
-完成 Seg-Road v1 的数据、训练、指标和复现闭环
--> SegRoadV2：可变形注意力、GroupDCN、条带卷积
+Seg-Road v1：已完成阶段性 baseline 收口
+-> SegRoadV2：当前开始精读
 -> DiffRoad：条件扩散、DSA-FPN、PAGDecoder、拓扑指标
 -> FDMamba：频域学习、可变形扫描、SSM/Mamba、图级拓扑
 ```
 
-详细路线见 `08_future_paper_path.md`。三篇论文当前状态：**已归档并完成摘要级定位，待当前正式基线闭环后依次精读**。
-
-## 当前知识闭环
-
-```text
-真实 road_mask
-  -> code/pcs.py
-  -> pcs_target
-
-输入 image
-  -> code/model.py
-  -> seg_pred, pcs_pred
-
-预测与标签
-  -> code/loss.py
-  -> total_loss
-```
-
-## 下一步
-
-下一阶段继续完成第一篇论文的正式实验闭环：
-
-```text
-全量 threshold sweep 并保存 CSV
-低学习率短程续训
-PCS 消融实验
-统一生成 summary.md 结果表
-补充推理速度统计
-开始 SegRoadV2 精读
-```
-
-DeepGlobe 已完成固定的 4980/1246 train/validation 划分。全量 8 轮试跑的最佳 validation IoU 为 0.3776，最佳检查点保存在 `runs/deepglobe/segroad-s-full-probe/best.pt`；6 个固定验证样本的预测对照图已经生成。
-
-训练全过程的现象、假设、排查实验、修正依据和逐轮趋势统一记录在 `09_training_journey.md`。
-
-第一篇是否可以过渡到第二篇的判断标准记录在 `10_segroad_v1_closure.md`。
-
-正式实验命令配方统一记录在 `../experiments/README.md`，包括 threshold sweep、低学习率短程续训和 PCS 消融。
+跨论文路线见 `08_future_paper_path.md`。
 
 ## 记录规则
 
-*   算法主线写入对应主题笔记；
-*   Python / NumPy / PyTorch 语法只在首次出现时补充；
-*   不使用当前环境无法稳定渲染的 LaTeX 分隔符；
-*   公式使用反引号或 `text` 代码块；
-*   每完成一个主题，更新本文件中的状态。
+* 单篇论文内容放入对应子目录。
+* 算法主线写入主题笔记，临时训练流水只写入 journey/closure。
+* Python、NumPy、PyTorch 语法只在首次出现时补充。
+* 不使用当前环境无法稳定渲染的 LaTeX 分隔符。
+* 公式使用反引号或 `text` 代码块。
+* 每完成一个主题，更新本文件和对应论文子目录的 README。

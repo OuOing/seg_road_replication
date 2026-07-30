@@ -2,7 +2,9 @@ import unittest
 from pathlib import Path
 from tempfile import TemporaryDirectory
 
-from summarize_experiment import load_threshold_csv, markdown_table
+import torch
+
+from summarize_experiment import checkpoint_row, load_threshold_csv, markdown_table
 
 
 class LoadThresholdCsvTest(unittest.TestCase):
@@ -53,6 +55,33 @@ class MarkdownTableTest(unittest.TestCase):
 
         self.assertIn("| exp | 8 | 0.5000 | 0.3776 |", table)
         self.assertIn("Params", table)
+
+
+class CheckpointRowTest(unittest.TestCase):
+    def test_uses_eval_threshold_from_checkpoint_args(self):
+        metrics = {
+            "iou": 0.1,
+            "f1": 0.2,
+            "precision": 0.3,
+            "recall": 0.4,
+            "accuracy": 0.5,
+            "predicted_positive_ratio": 0.6,
+            "target_positive_ratio": 0.7,
+        }
+        with TemporaryDirectory() as tmpdir:
+            checkpoint_path = Path(tmpdir) / "best.pt"
+            torch.save(
+                {
+                    "epoch": 9,
+                    "metrics": metrics,
+                    "args": {"eval_threshold": 0.85},
+                },
+                checkpoint_path,
+            )
+
+            row = checkpoint_row(checkpoint_path, "s")
+
+        self.assertEqual(row["threshold"], 0.85)
 
 
 if __name__ == "__main__":
