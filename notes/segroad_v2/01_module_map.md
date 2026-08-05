@@ -9,7 +9,7 @@
 | DSA | Encoder Transformer block | 全局注意力采样位置可变 | SRA 固定采样不够贴合弯曲道路 |
 | GroupDCN | Encoder CNN/local branch | 局部卷积采样位置可变 | 普通卷积固定 3x3 网格 |
 | Strip Conv | Decoder | 更适合细长道路形状 | 普通方形卷积会看进无关背景 |
-| Re-parameterization | Inference stage | 保持训练表达力，加快推理 | 多分支结构推理成本高 |
+| Re-parameterization | Inference stage | 等价合并分支，利用规则算子加快实测推理 | 多分支结构调度成本高 |
 | PCS | Output/auxiliary branch | 强化道路连通性 | 道路断裂、拓扑不稳定 |
 
 ## 2. DSA
@@ -98,8 +98,8 @@ Strip convolution 使用长条卷积：
 
 ```text
 把 Conv + BN 融合
-把多个卷积分支合并
-减少实际推理计算
+把多个卷积分支等价合并
+减少分支和算子调度，利用硬件优化
 ```
 
 一句话：
