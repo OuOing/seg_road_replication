@@ -55,6 +55,7 @@ Recall：0.6135
 | 3 | `segroad_v2/02_dsa.md` | DSA 从 SRA 升级而来的直觉和公式 | 核心原理已完成 |
 | 4 | `segroad_v2/03_groupdcn.md` | 普通卷积、DCN、DCNv3 与 GroupDCN | 核心原理已完成 |
 | 5 | `segroad_v2/04_strip_convolution.md` | 条带卷积、Conv-BN 融合与重参数化 | 核心原理已完成 |
+| 6 | `segroad_v2/05_pcs_loss_and_training.md` | PCS 推理、联合损失和三阶段训练 | 核心原理已完成 |
 
 第二篇学习主线：
 
