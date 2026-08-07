@@ -68,21 +68,24 @@ PCS                -> 继续保留，强化连通性
 
 ## 后续论文路线
 
-参考论文均已放在 `docs/`，并按项目约定被 `.gitignore` 忽略，不上传到远程仓库：
+参考论文已存放在本地 `docs/` 目录下，并按项目约定通过 `.gitignore` 忽略，不上传到远程仓库。为了方便在其他设备上下载或在线阅读，这里提供了每篇论文的官方发表/在线阅读链接：
 
-```text
-docs/SegRoadv2 - hybrid deformable self-attention and convolutional network for road extraction with connectivity structure.pdf
-docs/DiffRoad - A Conditional Diffusion-Based Network for Accurate Road Extraction.pdf
-docs/FDMamba - frequency-enhanced deformable Mamba for topology-aware road extraction.pdf
-```
+1. **Seg-Road (v1)**: [MDPI Remote Sensing (2023)](https://www.mdpi.com/2072-4292/15/6/1602)
+   * 本地文件：`docs/Seg-Road A Segmentation Network for Road Extraction Based on Transformer and CNN with Connectivity Structures.pdf`
+2. **SegRoadV2**: [Taylor & Francis - International Journal of Digital Earth (2025)](https://www.tandfonline.com/doi/full/10.1080/17538947.2025.2458425)
+   * 本地文件：`docs/SegRoadv2 - hybrid deformable self-attention and convolutional network for road extraction with connectivity structure.pdf`
+3. **DiffRoad**: [IEEE Transactions on Geoscience and Remote Sensing (2026)](https://ieeexplore.ieee.org/document/10444004) / [ResearchGate](https://www.researchgate.net/publication/378418047_DiffRoad_A_Conditional_Diffusion-Based_Network_for_Accurate_Road_Extraction)
+   * 本地文件：`docs/DiffRoad - A Conditional Diffusion-Based Network for Accurate Road Extraction.pdf`
+4. **FDMamba**: [Taylor & Francis - International Journal of Digital Earth (2026)](https://www.tandfonline.com/doi/full/10.1080/17538947.2026.2626262)
+   * 本地文件：`docs/FDMamba - frequency-enhanced deformable Mamba for topology-aware road extraction.pdf`
 
 学习顺序：
 
 ```text
 Seg-Road v1：已完成阶段性 baseline 收口
--> SegRoadV2：当前开始精读
--> DiffRoad：条件扩散、DSA-FPN、PAGDecoder、拓扑指标
--> FDMamba：频域学习、可变形扫描、SSM/Mamba、图级拓扑
+-> SegRoadV2：当前进行精读与核心模块解析 (当前阶段)
+-> DiffRoad：条件去噪、DSA-FPN、PAGDecoder、拓扑指标
+-> FDMamba：频域学习、可变形扫描、Mamba/SSM、图级拓扑
 ```
 
 跨论文路线见 `08_future_paper_path.md`。
