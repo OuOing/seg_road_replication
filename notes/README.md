@@ -49,13 +49,23 @@ Recall：0.6135
 
 | 顺序 | 笔记 | 内容 | 状态 |
 | :--- | :--- | :--- | :--- |
-| 0 | `segroad_v2/README.md` | 第二篇笔记索引 | 已建立 |
-| 1 | `segroad_v2/00_paper_overview.md` | 论文动机、整体结构、与 v1 的关系 | 已建立 |
-| 2 | `segroad_v2/01_module_map.md` | DSA、GroupDCN、条带卷积、PCS 的模块地图 | 已建立 |
-| 3 | `segroad_v2/02_dsa.md` | DSA 从 SRA 升级而来的直觉和公式 | 核心原理已完成 |
-| 4 | `segroad_v2/03_groupdcn.md` | 普通卷积、DCN、DCNv3 与 GroupDCN | 核心原理已完成 |
-| 5 | `segroad_v2/04_strip_convolution.md` | 条带卷积、Conv-BN 融合与重参数化 | 核心原理已完成 |
-| 6 | `segroad_v2/05_pcs_loss_and_training.md` | PCS 推理、联合损失和三阶段训练 | 核心原理已完成 |
+| 0 | `segroad_v2/README.md` | 第二篇笔记索引 | 已完成 |
+| 1 | `segroad_v2/00_paper_overview.md` | 论文动机、整体结构、与 v1 的关系 | 已完成 |
+| 2 | `segroad_v2/01_module_map.md` | DSA、GroupDCN、条带卷积、PCS 的模块地图 | 已完成 |
+| 3 | `segroad_v2/02_dsa.md` | DSA 从 SRA 升级而来的直觉和公式 | 已完成 |
+| 4 | `segroad_v2/03_groupdcn.md` | 普通卷积、DCN、DCNv3 与 GroupDCN | 已完成 |
+| 5 | `segroad_v2/04_strip_convolution.md` | 条带卷积、Conv-BN 融合与重参数化 | 已完成 |
+| 6 | `segroad_v2/05_pcs_loss_and_training.md` | PCS 推理、联合损失和三阶段训练 | 已完成 |
+| 7 | `segroad_v2/06_review_summary.md` | SegRoadV2 复习与对比速查总览 | 已归纳收口 |
+
+## 第三篇：DiffRoad (进行中 🚀)
+
+目录：`diffroad/`
+
+| 顺序 | 笔记 | 内容 | 状态 |
+| :--- | :--- | :--- | :--- |
+| 0 | `diffroad/README.md` | 第三篇笔记索引与学习路线 | 已建立 |
+| 1 | `diffroad/00_paper_overview.md` | 条件去噪扩散模型原理、动机与与前两篇的演进关系 | 核心原理进行中 |
 
 第二篇学习主线：
 

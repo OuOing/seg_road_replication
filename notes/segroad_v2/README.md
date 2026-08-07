@@ -8,12 +8,13 @@
 
 | 顺序 | 笔记 | 内容 | 状态 |
 | :--- | :--- | :--- | :--- |
-| 0 | `00_paper_overview.md` | 论文动机、整体结构、与 v1 的关系 | 已建立 |
-| 1 | `01_module_map.md` | DSA、GroupDCN、条带卷积、PCS 的模块地图 | 已建立 |
-| 2 | `02_dsa.md` | DSA 从 SRA 升级而来的直觉和公式 | 核心原理已完成 |
-| 3 | `03_groupdcn.md` | 普通卷积、DCN、DCNv3 与 GroupDCN | 核心原理已完成 |
-| 4 | `04_strip_convolution.md` | 条带卷积、Conv-BN 融合与重参数化 | 核心原理已完成 |
-| 5 | `05_pcs_loss_and_training.md` | PCS 推理、联合损失和三阶段训练 | 核心原理已完成 |
+| 0 | `00_paper_overview.md` | 论文动机、整体结构、与 v1 的关系 | 已完成 |
+| 1 | `01_module_map.md` | DSA、GroupDCN、条带卷积、PCS 的模块地图 | 已完成 |
+| 2 | `02_dsa.md` | DSA 从 SRA 升级而来的直觉和公式 | 已完成 |
+| 3 | `03_groupdcn.md` | 普通卷积、DCN、DCNv3 与 GroupDCN | 已完成 |
+| 4 | `04_strip_convolution.md` | 条带卷积、Conv-BN 融合与重参数化 | 已完成 |
+| 5 | `05_pcs_loss_and_training.md` | PCS 推理、联合损失和三阶段训练 | 已完成 |
+| 6 | `06_review_summary.md` | SegRoadV2 复习与对比速查总览 | 已归纳收口 |
 
 ## 学习主线
 
