@@ -11,8 +11,8 @@
 | 0 | `README.md` | 第三篇笔记索引与学习路线 | 已建立 |
 | 1 | `00_paper_overview.md` | 论文动机、整体结构、与前两篇的范式演进 | 已完成 |
 | 2 | `01_diffusion_basics.md` | 扩散模型基础、前向加噪、反向去噪与条件引导 (直觉大白话) | 已完成 |
-| 3 | `02_dsa_fpn_encoder.md` | DSA-FPN 条件编码器：复用 v2 的 DSA 并融合特征金字塔 | 准备开启 🚀 |
-| 4 | `03_pag_decoder.md` | PAGDecoder 解码器：渐进式注意力引导与掩码生成 | 待开始 |
+| 3 | `02_dsa_fpn_encoder.md` | DSA-FPN 条件编码器：复用 v2 的 DSA 并融合特征金字塔 | 已完成 |
+| 4 | `03_pag_decoder.md` | PAGDecoder 解码器：渐进式注意力引导与掩码生成 | 准备开启 🚀 |
 | 5 | `04_topology_metrics.md` | 拓扑评估指标：突破传统 IoU，学习 APLS 与 TOPO-F1 | 待开始 |
 | 6 | `05_review_and_comparison.md` | 三篇论文大一统复习总结与演进脉络收口 | 待开始 |
 
